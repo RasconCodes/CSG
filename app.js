@@ -282,7 +282,7 @@ const engravingBrush = new Brush(
 // Position the engraving cutter so it starts
 // inside the top of the handle and extends upward.
 engravingBrush.position.y =
-  bodyHeight + handleHeight - engravingDepth  / 2;
+  bodyHeight + handleHeight;
 
 engravingBrush.updateMatrixWorld(true);
 
