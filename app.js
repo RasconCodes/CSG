@@ -3,7 +3,7 @@ import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.180.0/exampl
 import { FontLoader } from "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/loaders/FontLoader.js";
 import { TextGeometry } from "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/geometries/TextGeometry.js";
 import { STLExporter } from "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/exporters/STLExporter.js";
-import { Brush, Evaluator, ADDITION, SUBTRACTION } from "https://esm.sh/three-bvh-csg@0.0.17?external=three";
+import { Brush, Evaluator, ADDITION, SUBTRACTION } from "https://cdn.jsdelivr.net/npm/three-bvh-csg@0.0.17/+esm";
 import opentype from "https://cdn.jsdelivr.net/npm/opentype.js@1.3.4/+esm";
 
 const viewer = document.querySelector("#viewer");
