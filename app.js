@@ -143,7 +143,7 @@ function createStamp() {
   );
 
   const bodyBrush = new Brush(bodyGeometry, material);
-  bodyBrush.position.z = bodyHeight / 2;
+  bodyBrush.position.y = bodyHeight / 2;
   bodyBrush.updateMatrixWorld(true);
 
   // -------------------------
@@ -158,7 +158,7 @@ function createStamp() {
   );
 
   const handleBrush = new Brush(handleGeometry, material);
-  handleBrush.position.z = bodyHeight + handleHeight / 2;
+  handleBrush.position.y = bodyHeight + handleHeight / 2;
   handleBrush.updateMatrixWorld(true);
 
   // -------------------------
@@ -218,21 +218,27 @@ function createStamp() {
     1
   );
 
-  letterGeometry.center();
+letterGeometry.center();
 
-  const letterBrush = new Brush(
-    letterGeometry,
-    material
-  );
+// Rotate the font extrusion so it runs vertically.
+letterGeometry.rotateX(Math.PI / 2);
 
-  letterBrush.position.z = depth / 2;
-  letterBrush.updateMatrixWorld(true);
+const letterBrush = new Brush(
+  letterGeometry,
+  material
+);
 
-  stampBrush = evaluator.evaluate(
-    stampBrush,
-    letterBrush,
-    ADDITION
-  );
+// Put the raised letter below the bottom of the stamp.
+letterBrush.position.y = -depth / 2;
+
+letterBrush.updateMatrixWorld(true);
+
+stampBrush = evaluator.evaluate(
+  stampBrush,
+  letterBrush,
+  ADDITION
+);
+
 
   // -------------------------
   // RECESSED IDENTIFICATION LETTER
@@ -264,17 +270,20 @@ function createStamp() {
     1
   );
 
-  engravingGeometry.center();
+engravingGeometry.center();
 
-  const engravingBrush = new Brush(
-    engravingGeometry,
-    material
-  );
+// Rotate the font extrusion so it runs vertically.
+engravingGeometry.rotateX(Math.PI / 2);
+
+const engravingBrush = new Brush(
+  engravingGeometry,
+  material
+);
 
   // Put the cutter at the top of the handle.
   // It extends slightly above the surface so
   // the subtraction creates an open cavity.
-  engravingBrush.position.z =
+  engravingBrush.position.y =
     totalHeight - engravingDepth;
 
   engravingBrush.updateMatrixWorld(true);
@@ -344,37 +353,8 @@ function pathToShapes(path) {
 
   return shapePath.toShapes(true);
 }
-function makeTextMesh(char, extrusion, targetWidth, raised) {
-  const glyph = currentFont.charToGlyph(char);
 
-  if (!glyph) {
-    throw new Error(`Character "${char}" was not found in the uploaded font.`);
-  }
 
-  const path = glyph.getPath(char, 0, 0, 100);
-  const shapes = pathToShapes(path);
-
-  const geometry = new THREE.ExtrudeGeometry(shapes, {
-    depth: extrusion,
-    bevelEnabled: false,
-    curveSegments: 8
-  });
-
-  geometry.computeBoundingBox();
-
-  const box = geometry.boundingBox;
-  const width = box.max.x - box.min.x;
-  const scale = targetWidth / Math.max(width, 0.001);
-
-  geometry.scale(scale, scale, 1);
-  geometry.center();
-
-  const material = new THREE.MeshStandardMaterial({
-    color: raised ? 0x777777 : 0x555555
-  });
-
-  return new THREE.Mesh(geometry, material);
-}
 
 function buildPreview() {
   if (currentSceneGroup) scene.remove(currentSceneGroup);
