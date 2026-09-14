@@ -282,29 +282,81 @@ function createStamp() {
   return stampBrush;
 }
 
-function makeTextMesh(char, extrusion, targetWidth, raised) {
-  // opentype gives us exact font outlines. Three.js ShapeGeometry is used
-  // for the preview prototype; STL export will be improved in the next step
-  // to use the actual font contour directly.
-  const fontJson = currentFont.toFont({
-    familyName: "UploadedFont",
-    styleName: "Regular"
-  });
-  const loader = new FontLoader();
-  const threeFont = loader.parse(fontJson);
+function pathToShapes(path) {
+  const shapes = [];
+  let shape = null;
 
-  const geometry = new TextGeometry(char, {
-    font: threeFont,
-    size: 10,
+  for (const command of path.commands) {
+    switch (command.type) {
+      case "M":
+        shape = new THREE.Shape();
+        shape.moveTo(command.x, command.y);
+        shapes.push(shape);
+        break;
+
+      case "L":
+        if (shape) {
+          shape.lineTo(command.x, command.y);
+        }
+        break;
+
+      case "C":
+        if (shape) {
+          shape.bezierCurveTo(
+            command.x1,
+            command.y1,
+            command.x2,
+            command.y2,
+            command.x,
+            command.y
+          );
+        }
+        break;
+
+      case "Q":
+        if (shape) {
+          shape.quadraticCurveTo(
+            command.x1,
+            command.y1,
+            command.x,
+            command.y
+          );
+        }
+        break;
+
+      case "Z":
+        if (shape) {
+          shape.closePath();
+        }
+        break;
+    }
+  }
+
+  return shapes;
+}
+
+function makeTextMesh(char, extrusion, targetWidth, raised) {
+  const glyph = currentFont.charToGlyph(char);
+
+  if (!glyph) {
+    throw new Error(`Character "${char}" was not found in the uploaded font.`);
+  }
+
+  const path = glyph.getPath(char, 0, 0, 100);
+  const shapes = pathToShapes(path);
+
+  const geometry = new THREE.ExtrudeGeometry(shapes, {
     depth: extrusion,
-    curveSegments: 8,
-    bevelEnabled: false
+    bevelEnabled: false,
+    curveSegments: 8
   });
+
   geometry.computeBoundingBox();
 
   const box = geometry.boundingBox;
   const width = box.max.x - box.min.x;
   const scale = targetWidth / Math.max(width, 0.001);
+
   geometry.scale(scale, scale, 1);
   geometry.center();
 
