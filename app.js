@@ -176,21 +176,20 @@ function createStamp() {
   // RAISED STAMPING LETTER
   // -------------------------
 
-  const fontJson = currentFont.toFont({
-    familyName: "UploadedFont",
-    styleName: "Regular"
-  });
+const glyph = currentFont.charToGlyph(char);
 
-  const loader = new FontLoader();
-  const threeFont = loader.parse(fontJson);
+if (!glyph) {
+  throw new Error(`Character "${char}" was not found in the uploaded font.`);
+}
 
-  const letterGeometry = new TextGeometry(char, {
-    font: threeFont,
-    size: 10,
-    depth: depth,
-    curveSegments: 8,
-    bevelEnabled: false
-  });
+const path = glyph.getPath(char, 0, 0, 100);
+const shapes = pathToShapes(path);
+
+const letterGeometry = new THREE.ExtrudeGeometry(shapes, {
+  depth: depth,
+  bevelEnabled: false,
+  curveSegments: 8
+});
 
   letterGeometry.computeBoundingBox();
 
@@ -225,13 +224,11 @@ function createStamp() {
   // RECESSED IDENTIFICATION LETTER
   // -------------------------
 
-  const engravingGeometry = new TextGeometry(char, {
-    font: threeFont,
-    size: 10,
-    depth: engravingDepth + 0.2,
-    curveSegments: 8,
-    bevelEnabled: false
-  });
+ const engravingGeometry = new THREE.ExtrudeGeometry(shapes, {
+  depth: engravingDepth + 0.2,
+  bevelEnabled: false,
+  curveSegments: 8
+});
 
   engravingGeometry.computeBoundingBox();
 
