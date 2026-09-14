@@ -122,42 +122,164 @@ function createStamp() {
   const engravingDepth = Number(engravingDepthInput.value);
   const char = letterInput.value || "A";
 
-  const group = new THREE.Group();
-
-  // Simple cylindrical stamp body + handle.
-  // Coordinates: bottom stamping face is at Z=0.
   const bodyRadius = size / 2;
   const bodyHeight = 6;
   const handleRadius = Math.max(size * 0.34, 7);
+  const totalHeight = bodyHeight + handleHeight;
 
-  const body = new THREE.Mesh(
-    new THREE.CylinderGeometry(bodyRadius, bodyRadius, bodyHeight, 96),
-    new THREE.MeshStandardMaterial({ color: 0xc9c9c9 })
+  const material = new THREE.MeshStandardMaterial({
+    color: 0xc9c9c9
+  });
+
+  // -------------------------
+  // MAIN STAMP BODY
+  // -------------------------
+
+  const bodyGeometry = new THREE.CylinderGeometry(
+    bodyRadius,
+    bodyRadius,
+    bodyHeight,
+    96
   );
-  body.rotation.x = 0;
-  body.position.z = bodyHeight / 2;
-  group.add(body);
 
-  const handle = new THREE.Mesh(
-    new THREE.CylinderGeometry(handleRadius, handleRadius * 1.08, handleHeight, 64),
-    new THREE.MeshStandardMaterial({ color: 0xb9b9b9 })
+  const bodyBrush = new Brush(bodyGeometry, material);
+  bodyBrush.rotation.x = 0;
+  bodyBrush.position.z = bodyHeight / 2;
+  bodyBrush.updateMatrixWorld(true);
+
+  // -------------------------
+  // HANDLE
+  // -------------------------
+
+  const handleGeometry = new THREE.CylinderGeometry(
+    handleRadius,
+    handleRadius * 1.08,
+    handleHeight,
+    64
   );
-  handle.position.z = bodyHeight + handleHeight / 2;
-  group.add(handle);
 
-  // The visible stamping letter is a real 3D raised piece.
-  const raised = makeTextMesh(char, depth, size * 0.65, true);
-  raised.position.z = 0.01;
-  group.add(raised);
+  const handleBrush = new Brush(handleGeometry, material);
+  handleBrush.position.z = bodyHeight + handleHeight / 2;
+  handleBrush.updateMatrixWorld(true);
 
-  // Identification letter: visually recessed in the preview.
-  // For the first prototype this is represented by a dark inset mesh.
-  const idLetter = makeTextMesh(char, Math.max(0.05, engravingDepth), handleRadius * 1.35, false);
-  idLetter.material = new THREE.MeshStandardMaterial({ color: 0x555555 });
-  idLetter.position.z = bodyHeight + handleHeight - engravingDepth + 0.02;
-  group.add(idLetter);
+  // -------------------------
+  // JOIN BODY + HANDLE
+  // -------------------------
 
-  return group;
+  let stampBrush = evaluator.evaluate(
+    bodyBrush,
+    handleBrush,
+    ADDITION
+  );
+
+  // -------------------------
+  // RAISED STAMPING LETTER
+  // -------------------------
+
+  const fontJson = currentFont.toFont({
+    familyName: "UploadedFont",
+    styleName: "Regular"
+  });
+
+  const loader = new FontLoader();
+  const threeFont = loader.parse(fontJson);
+
+  const letterGeometry = new TextGeometry(char, {
+    font: threeFont,
+    size: 10,
+    depth: depth,
+    curveSegments: 8,
+    bevelEnabled: false
+  });
+
+  letterGeometry.computeBoundingBox();
+
+  const box = letterGeometry.boundingBox;
+  const width = box.max.x - box.min.x;
+  const scale = (size * 0.65) / Math.max(width, 0.001);
+
+  letterGeometry.scale(scale, scale, 1);
+  letterGeometry.center();
+
+  const letterBrush = new Brush(
+    letterGeometry,
+    material
+  );
+
+  // The letter starts at the stamping surface
+  // and sticks upward into the body.
+  letterBrush.position.z = depth / 2;
+  letterBrush.updateMatrixWorld(true);
+
+  // -------------------------
+  // JOIN RAISED LETTER
+  // -------------------------
+
+  stampBrush = evaluator.evaluate(
+    stampBrush,
+    letterBrush,
+    ADDITION
+  );
+
+  // -------------------------
+  // RECESSED IDENTIFICATION LETTER
+  // -------------------------
+
+  const engravingGeometry = new TextGeometry(char, {
+    font: threeFont,
+    size: 10,
+    depth: engravingDepth + 0.2,
+    curveSegments: 8,
+    bevelEnabled: false
+  });
+
+  engravingGeometry.computeBoundingBox();
+
+  const engravingBox = engravingGeometry.boundingBox;
+  const engravingWidth =
+    engravingBox.max.x - engravingBox.min.x;
+
+  const engravingScale =
+    (handleRadius * 1.35) /
+    Math.max(engravingWidth, 0.001);
+
+  engravingGeometry.scale(
+    engravingScale,
+    engravingScale,
+    1
+  );
+
+  engravingGeometry.center();
+
+  const engravingBrush = new Brush(
+    engravingGeometry,
+    material
+  );
+
+  // The cutter extends slightly above the top surface,
+  // creating a real open cavity instead of a dark fake letter.
+  engravingBrush.position.z =
+    totalHeight - engravingDepth;
+
+  engravingBrush.updateMatrixWorld(true);
+
+  // -------------------------
+  // CUT THE IDENTIFICATION LETTER
+  // -------------------------
+
+  stampBrush = evaluator.evaluate(
+    stampBrush,
+    engravingBrush,
+    SUBTRACTION
+  );
+
+  // -------------------------
+  // RETURN THE FINISHED STAMP
+  // -------------------------
+
+  stampBrush.material = material;
+
+  return stampBrush;
 }
 
 function makeTextMesh(char, extrusion, targetWidth, raised) {
