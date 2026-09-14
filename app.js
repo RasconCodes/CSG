@@ -244,13 +244,12 @@ stampBrush = evaluator.evaluate(
   // RECESSED IDENTIFICATION LETTER
   // -------------------------
 
-  const engravingGeometry =
-    new THREE.ExtrudeGeometry(shapes, {
-      depth: engravingDepth + 0.2,
-      bevelEnabled: false,
-      curveSegments: 8
-    });
-
+const engravingGeometry =
+  new THREE.ExtrudeGeometry(shapes, {
+    depth: engravingDepth + 2,
+    bevelEnabled: false,
+    curveSegments: 8
+  });
   engravingGeometry.computeBoundingBox();
 
   const engravingBox =
@@ -280,13 +279,12 @@ const engravingBrush = new Brush(
   material
 );
 
-  // Put the cutter at the top of the handle.
-  // It extends slightly above the surface so
-  // the subtraction creates an open cavity.
-  engravingBrush.position.y =
-  bodyHeight + handleHeight - engravingDepth / 2;
+// Position the engraving cutter so it starts
+// inside the top of the handle and extends upward.
+engravingBrush.position.y =
+  bodyHeight + handleHeight - engravingDepth  / 2;
 
-  engravingBrush.updateMatrixWorld(true);
+engravingBrush.updateMatrixWorld(true);
 
   // -------------------------
   // CUT IDENTIFICATION LETTER
