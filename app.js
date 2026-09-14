@@ -143,7 +143,6 @@ function createStamp() {
   );
 
   const bodyBrush = new Brush(bodyGeometry, material);
-  bodyBrush.rotation.x = 0;
   bodyBrush.position.z = bodyHeight / 2;
   bodyBrush.updateMatrixWorld(true);
 
@@ -173,31 +172,52 @@ function createStamp() {
   );
 
   // -------------------------
+  // GET FONT GLYPH
+  // -------------------------
+
+  const glyph = currentFont.charToGlyph(char);
+
+  if (!glyph) {
+    throw new Error(
+      `Character "${char}" was not found in the uploaded font.`
+    );
+  }
+
+  const path = glyph.getPath(0, 0, 100);
+  const shapes = pathToShapes(path);
+
+  if (!shapes.length) {
+    throw new Error(
+      `Could not create a shape for "${char}".`
+    );
+  }
+
+  // -------------------------
   // RAISED STAMPING LETTER
   // -------------------------
 
-const glyph = currentFont.charToGlyph(char);
-
-if (!glyph) {
-  throw new Error(`Character "${char}" was not found in the uploaded font.`);
-}
-
-const path = glyph.getPath(char, 0, 0, 100);
-const shapes = pathToShapes(path);
-
-const letterGeometry = new THREE.ExtrudeGeometry(shapes, {
-  depth: depth,
-  bevelEnabled: false,
-  curveSegments: 8
-});
+  const letterGeometry = new THREE.ExtrudeGeometry(shapes, {
+    depth: depth,
+    bevelEnabled: false,
+    curveSegments: 8
+  });
 
   letterGeometry.computeBoundingBox();
 
-  const box = letterGeometry.boundingBox;
-  const width = box.max.x - box.min.x;
-  const scale = (size * 0.65) / Math.max(width, 0.001);
+  const letterBox = letterGeometry.boundingBox;
+  const letterWidth =
+    letterBox.max.x - letterBox.min.x;
 
-  letterGeometry.scale(scale, scale, 1);
+  const letterScale =
+    (size * 0.65) /
+    Math.max(letterWidth, 0.001);
+
+  letterGeometry.scale(
+    letterScale,
+    letterScale,
+    1
+  );
+
   letterGeometry.center();
 
   const letterBrush = new Brush(
@@ -205,14 +225,8 @@ const letterGeometry = new THREE.ExtrudeGeometry(shapes, {
     material
   );
 
-  // The letter starts at the stamping surface
-  // and sticks upward into the body.
   letterBrush.position.z = depth / 2;
   letterBrush.updateMatrixWorld(true);
-
-  // -------------------------
-  // JOIN RAISED LETTER
-  // -------------------------
 
   stampBrush = evaluator.evaluate(
     stampBrush,
@@ -224,17 +238,21 @@ const letterGeometry = new THREE.ExtrudeGeometry(shapes, {
   // RECESSED IDENTIFICATION LETTER
   // -------------------------
 
- const engravingGeometry = new THREE.ExtrudeGeometry(shapes, {
-  depth: engravingDepth + 0.2,
-  bevelEnabled: false,
-  curveSegments: 8
-});
+  const engravingGeometry =
+    new THREE.ExtrudeGeometry(shapes, {
+      depth: engravingDepth + 0.2,
+      bevelEnabled: false,
+      curveSegments: 8
+    });
 
   engravingGeometry.computeBoundingBox();
 
-  const engravingBox = engravingGeometry.boundingBox;
+  const engravingBox =
+    engravingGeometry.boundingBox;
+
   const engravingWidth =
-    engravingBox.max.x - engravingBox.min.x;
+    engravingBox.max.x -
+    engravingBox.min.x;
 
   const engravingScale =
     (handleRadius * 1.35) /
@@ -253,15 +271,16 @@ const letterGeometry = new THREE.ExtrudeGeometry(shapes, {
     material
   );
 
-  // The cutter extends slightly above the top surface,
-  // creating a real open cavity instead of a dark fake letter.
+  // Put the cutter at the top of the handle.
+  // It extends slightly above the surface so
+  // the subtraction creates an open cavity.
   engravingBrush.position.z =
     totalHeight - engravingDepth;
 
   engravingBrush.updateMatrixWorld(true);
 
   // -------------------------
-  // CUT THE IDENTIFICATION LETTER
+  // CUT IDENTIFICATION LETTER
   // -------------------------
 
   stampBrush = evaluator.evaluate(
@@ -271,7 +290,7 @@ const letterGeometry = new THREE.ExtrudeGeometry(shapes, {
   );
 
   // -------------------------
-  // RETURN THE FINISHED STAMP
+  // RETURN FINISHED STAMP
   // -------------------------
 
   stampBrush.material = material;
@@ -281,51 +300,46 @@ const letterGeometry = new THREE.ExtrudeGeometry(shapes, {
 
 function pathToShapes(path) {
   const shapes = [];
-  let shape = null;
+  let currentShape = null;
 
   for (const command of path.commands) {
-    switch (command.type) {
-      case "M":
-        shape = new THREE.Shape();
-        shape.moveTo(command.x, command.y);
-        shapes.push(shape);
-        break;
+    if (command.type === "M") {
+      currentShape = new THREE.Shape();
+      currentShape.moveTo(command.x, command.y);
+      shapes.push(currentShape);
 
-      case "L":
-        if (shape) {
-          shape.lineTo(command.x, command.y);
-        }
-        break;
+    } else if (command.type === "L") {
+      if (currentShape) {
+        currentShape.lineTo(command.x, command.y);
+      }
 
-      case "C":
-        if (shape) {
-          shape.bezierCurveTo(
-            command.x1,
-            command.y1,
-            command.x2,
-            command.y2,
-            command.x,
-            command.y
-          );
-        }
-        break;
+    } else if (command.type === "C") {
+      if (currentShape) {
+        currentShape.bezierCurveTo(
+          command.x1,
+          command.y1,
+          command.x2,
+          command.y2,
+          command.x,
+          command.y
+        );
+      }
 
-      case "Q":
-        if (shape) {
-          shape.quadraticCurveTo(
-            command.x1,
-            command.y1,
-            command.x,
-            command.y
-          );
-        }
-        break;
+    } else if (command.type === "Q") {
+      if (currentShape) {
+        currentShape.quadraticCurveTo(
+          command.x1,
+          command.y1,
+          command.x,
+          command.y
+        );
+      }
 
-      case "Z":
-        if (shape) {
-          shape.closePath();
-        }
-        break;
+    } else if (command.type === "Z") {
+      if (currentShape) {
+        currentShape.closePath();
+        currentShape = null;
+      }
     }
   }
 
