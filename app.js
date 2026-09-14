@@ -284,7 +284,7 @@ const engravingBrush = new Brush(
   // It extends slightly above the surface so
   // the subtraction creates an open cavity.
   engravingBrush.position.y =
-    totalHeight - engravingDepth;
+  bodyHeight + handleHeight - engravingDepth / 2;
 
   engravingBrush.updateMatrixWorld(true);
 
