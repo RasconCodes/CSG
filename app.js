@@ -299,23 +299,26 @@ function createStamp() {
 }
 
 function pathToShapes(path) {
-  const shapes = [];
-  let currentShape = null;
+  const shapePath = new THREE.ShapePath();
 
   for (const command of path.commands) {
-    if (command.type === "M") {
-      currentShape = new THREE.Shape();
-      currentShape.moveTo(command.x, command.y);
-      shapes.push(currentShape);
+    switch (command.type) {
+      case "M":
+        shapePath.moveTo(
+          command.x,
+          command.y
+        );
+        break;
 
-    } else if (command.type === "L") {
-      if (currentShape) {
-        currentShape.lineTo(command.x, command.y);
-      }
+      case "L":
+        shapePath.lineTo(
+          command.x,
+          command.y
+        );
+        break;
 
-    } else if (command.type === "C") {
-      if (currentShape) {
-        currentShape.bezierCurveTo(
+      case "C":
+        shapePath.bezierCurveTo(
           command.x1,
           command.y1,
           command.x2,
@@ -323,29 +326,24 @@ function pathToShapes(path) {
           command.x,
           command.y
         );
-      }
+        break;
 
-    } else if (command.type === "Q") {
-      if (currentShape) {
-        currentShape.quadraticCurveTo(
+      case "Q":
+        shapePath.quadraticCurveTo(
           command.x1,
           command.y1,
           command.x,
           command.y
         );
-      }
+        break;
 
-    } else if (command.type === "Z") {
-      if (currentShape) {
-        currentShape.closePath();
-        currentShape = null;
-      }
+      case "Z":
+        break;
     }
   }
 
-  return shapes;
+  return shapePath.toShapes(true);
 }
-
 function makeTextMesh(char, extrusion, targetWidth, raised) {
   const glyph = currentFont.charToGlyph(char);
 
