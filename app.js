@@ -1,29 +1,58 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js";
-import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/controls/OrbitControls.js";
-import { STLExporter } from "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/exporters/STLExporter.js";
+
+import {
+  OrbitControls
+} from "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/controls/OrbitControls.js";
+
+import {
+  STLExporter
+} from "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/exporters/STLExporter.js";
+
 import {
   Brush,
   Evaluator,
   ADDITION,
   SUBTRACTION
 } from "https://cdn.jsdelivr.net/npm/three-bvh-csg@0.0.17/+esm";
+
 import opentype from "https://cdn.jsdelivr.net/npm/opentype.js@1.3.4/+esm";
+
+import {
+  zipSync,
+  strToU8
+} from "https://cdn.jsdelivr.net/npm/fflate@0.8.2/+esm";
 
 
 // ------------------------------------------------------------
 // DOM
 // ------------------------------------------------------------
 
-const fontFile = document.getElementById("fontFile");
-const letterInput = document.getElementById("letter");
-const stampSizeInput = document.getElementById("stampSize");
-const letterDepthInput = document.getElementById("letterDepth");
-const handleHeightInput = document.getElementById("handleHeight");
+const fontFile =
+  document.getElementById("fontFile");
+
+const letterInput =
+  document.getElementById("letter");
+
+const stampSizeInput =
+  document.getElementById("stampSize");
+
+const letterDepthInput =
+  document.getElementById("letterDepth");
+
+const handleHeightInput =
+  document.getElementById("handleHeight");
+
 const engravingDepthInput =
   document.getElementById("engravingDepth");
 
+const previewButton =
+  document.getElementById("previewButton");
+
 const generateButton =
   document.getElementById("generate");
+
+const generateBatchButton =
+  document.getElementById("generateBatch");
 
 const viewer =
   document.getElementById("viewer");
@@ -146,7 +175,7 @@ let stampBrush = null;
 
 
 // ------------------------------------------------------------
-// Convert OpenType path into Three.js shapes
+// Convert OpenType path to Three.js shapes
 // ------------------------------------------------------------
 
 function pathToShapes(path) {
@@ -222,7 +251,7 @@ function pathToShapes(path) {
 // Create stamp
 // ------------------------------------------------------------
 
-function createStamp() {
+function createStamp(character) {
 
   const size =
     parseFloat(
@@ -246,7 +275,7 @@ function createStamp() {
 
 
   // ----------------------------------------------------------
-  // Dimensions
+  // Main dimensions
   // ----------------------------------------------------------
 
   const bodyHeight =
@@ -257,6 +286,23 @@ function createStamp() {
 
   const handleRadius =
     size * 0.30;
+
+
+  // Height of the tapered transition.
+  //
+  // This creates a sloped connection between
+  // the main disc and the narrower handle.
+  const transitionHeight =
+    Math.min(
+      5,
+      handleHeight * 0.30
+    );
+
+
+  const handleActualHeight =
+    handleHeight -
+    transitionHeight;
+
 
   const totalHeight =
     bodyHeight +
@@ -272,7 +318,7 @@ function createStamp() {
 
 
   // ----------------------------------------------------------
-  // Main body
+  // Main stamp body
   // ----------------------------------------------------------
 
   const bodyGeometry =
@@ -298,16 +344,72 @@ function createStamp() {
 
 
   // ----------------------------------------------------------
-  // Handle
+  // Tapered handle transition
+  // ----------------------------------------------------------
+  //
+  // The bottom is wider.
+  // The top is narrower.
+  //
+  // This creates a support-free slope.
+  // ----------------------------------------------------------
+
+  const transitionBottomRadius =
+    handleRadius * 1.35;
+
+  const transitionTopRadius =
+    handleRadius;
+
+
+  const transitionGeometry =
+    new THREE.CylinderGeometry(
+      transitionTopRadius,
+      transitionBottomRadius,
+      transitionHeight,
+      64
+    );
+
+
+  const transitionBrush =
+    new Brush(
+      transitionGeometry,
+      material
+    );
+
+
+  transitionBrush.position.y =
+    bodyHeight +
+    transitionHeight / 2;
+
+
+  transitionBrush.updateMatrixWorld(
+    true
+  );
+
+
+  // ----------------------------------------------------------
+  // Join body + tapered transition
+  // ----------------------------------------------------------
+
+  stampBrush =
+    evaluator.evaluate(
+      bodyBrush,
+      transitionBrush,
+      ADDITION
+    );
+
+
+  // ----------------------------------------------------------
+  // Straight handle
   // ----------------------------------------------------------
 
   const handleGeometry =
     new THREE.CylinderGeometry(
       handleRadius,
-      handleRadius * 1.08,
-      handleHeight,
+      handleRadius,
+      handleActualHeight,
       64
     );
+
 
   const handleBrush =
     new Brush(
@@ -315,9 +417,12 @@ function createStamp() {
       material
     );
 
+
   handleBrush.position.y =
     bodyHeight +
-    handleHeight / 2;
+    transitionHeight +
+    handleActualHeight / 2;
+
 
   handleBrush.updateMatrixWorld(
     true
@@ -325,12 +430,12 @@ function createStamp() {
 
 
   // ----------------------------------------------------------
-  // Join body + handle
+  // Join handle
   // ----------------------------------------------------------
 
   stampBrush =
     evaluator.evaluate(
-      bodyBrush,
+      stampBrush,
       handleBrush,
       ADDITION
     );
@@ -340,17 +445,15 @@ function createStamp() {
   // Selected character
   // ----------------------------------------------------------
 
-  const char =
-    letterInput.value || "A";
-
   const glyph =
     currentFont.charToGlyph(
-      char
+      character
     );
+
 
   if (!glyph) {
     throw new Error(
-      "Could not find that character in the font."
+      `Could not find "${character}" in the font.`
     );
   }
 
@@ -366,14 +469,16 @@ function createStamp() {
       100
     );
 
+
   const shapes =
     pathToShapes(
       path
     );
 
+
   if (!shapes.length) {
     throw new Error(
-      "Could not create a shape from that letter."
+      `Could not create a shape from "${character}".`
     );
   }
 
@@ -433,8 +538,8 @@ function createStamp() {
     );
 
 
-  // Put the raised letter below
-  // the bottom of the stamp.
+  // Put the raised letter
+  // below the bottom of the stamp.
   letterBrush.position.y =
     -depth / 2;
 
@@ -472,7 +577,7 @@ function createStamp() {
 
   if (!engravingShapes.length) {
     throw new Error(
-      "Could not create the engraving shape."
+      `Could not create the engraving shape for "${character}".`
     );
   }
 
@@ -523,7 +628,7 @@ function createStamp() {
   engravingGeometry.center();
 
 
-  // Rotate the font extrusion
+  // Rotate engraving cutter
   // vertically along Y.
   engravingGeometry.rotateX(
     Math.PI / 2
@@ -537,8 +642,8 @@ function createStamp() {
     );
 
 
-  // Put the engraving cutter
-  // through the top of the handle.
+  // Put the cutter through
+  // the top surface of the handle.
   engravingBrush.position.y =
     totalHeight -
     engravingDepth / 2;
@@ -570,14 +675,28 @@ function createStamp() {
 function buildPreview() {
 
   if (!currentFont) {
+
+    status.textContent =
+      "Choose a font first.";
+
     return;
   }
 
 
   try {
 
+    status.textContent =
+      "Generating preview…";
+
+
+    const character =
+      letterInput.value || "A";
+
+
     const newStamp =
-      createStamp();
+      createStamp(
+        character
+      );
 
 
     if (previewObject) {
@@ -665,7 +784,7 @@ function buildPreview() {
 
 
     status.textContent =
-      "Preview updated.";
+      "Preview ready.";
 
   } catch (err) {
 
@@ -687,6 +806,7 @@ fontFile.addEventListener(
 
     const file =
       fontFile.files[0];
+
 
     if (!file) {
       return;
@@ -714,10 +834,7 @@ fontFile.addEventListener(
 
 
       status.textContent =
-        "Font loaded. Pick a letter and generate.";
-
-
-      buildPreview();
+        "Font loaded. Set your options, then preview.";
 
     } catch (err) {
 
@@ -746,42 +863,25 @@ letterInput.addEventListener(
       [...letterInput.value]
         .slice(0, 1)
         .join("");
-
-
-    if (currentFont) {
-      buildPreview();
-    }
   }
 );
 
 
 // ------------------------------------------------------------
-// Numeric settings
+// Preview button
 // ------------------------------------------------------------
 
-for (
-  const element of [
-    stampSizeInput,
-    letterDepthInput,
-    handleHeightInput,
-    engravingDepthInput
-  ]
-) {
+previewButton.addEventListener(
+  "click",
+  () => {
 
-  element.addEventListener(
-    "input",
-    () => {
-
-      if (currentFont) {
-        buildPreview();
-      }
-    }
-  );
-}
+    buildPreview();
+  }
+);
 
 
 // ------------------------------------------------------------
-// Generate STL
+// Generate single STL
 // ------------------------------------------------------------
 
 generateButton.addEventListener(
@@ -799,8 +899,18 @@ generateButton.addEventListener(
 
     try {
 
+      status.textContent =
+        "Generating STL…";
+
+
+      const character =
+        letterInput.value || "A";
+
+
       const stamp =
-        createStamp();
+        createStamp(
+          character
+        );
 
 
       const exporter =
@@ -831,11 +941,6 @@ generateButton.addEventListener(
         );
 
 
-      const letter =
-        letterInput.value ||
-        "stamp";
-
-
       const safeFont =
         (
           fontFile.files[0]?.name ||
@@ -851,6 +956,13 @@ generateButton.addEventListener(
           );
 
 
+      const safeCharacter =
+        character.replace(
+          /[^a-z0-9_-]+/gi,
+          "_"
+        );
+
+
       const a =
         document.createElement(
           "a"
@@ -862,7 +974,7 @@ generateButton.addEventListener(
 
 
       a.download =
-        `${safeFont}_${letter}_clay_stamp.stl`;
+        `${safeFont}_${safeCharacter}_clay_stamp.stl`;
 
 
       a.click();
@@ -882,6 +994,185 @@ generateButton.addEventListener(
 
       status.textContent =
         "Something went wrong while generating the STL.";
+    }
+  }
+);
+
+
+// ------------------------------------------------------------
+// Generate alphabet + numbers ZIP
+// ------------------------------------------------------------
+
+generateBatchButton.addEventListener(
+  "click",
+  async () => {
+
+    if (!currentFont) {
+
+      status.textContent =
+        "Choose a TTF or OTF font first.";
+
+      return;
+    }
+
+
+    const characters =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+
+    try {
+
+      generateBatchButton.disabled =
+        true;
+
+      generateButton.disabled =
+        true;
+
+      previewButton.disabled =
+        true;
+
+
+      const exporter =
+        new STLExporter();
+
+
+      const files = {};
+
+
+      const fontBaseName =
+        (
+          fontFile.files[0]?.name ||
+          "font"
+        )
+          .replace(
+            /\.(ttf|otf)$/i,
+            ""
+          )
+          .replace(
+            /[^a-z0-9_-]+/gi,
+            "_"
+          );
+
+
+      for (
+        let i = 0;
+        i < characters.length;
+        i++
+      ) {
+
+        const character =
+          characters[i];
+
+
+        status.textContent =
+          `Generating ${character} (${i + 1} of ${characters.length})…`;
+
+
+        // Give the browser a chance to update
+        // the status message between stamps.
+        await new Promise(
+          resolve =>
+            setTimeout(
+              resolve,
+              20
+            )
+        );
+
+
+        const stamp =
+          createStamp(
+            character
+          );
+
+
+        const stl =
+          exporter.parse(
+            stamp,
+            {
+              binary: false
+            }
+          );
+
+
+        files[
+          `${fontBaseName}_${character}_clay_stamp.stl`
+        ] =
+          strToU8(
+            stl
+          );
+      }
+
+
+      status.textContent =
+        "Creating ZIP file…";
+
+
+      const zipData =
+        zipSync(
+          files,
+          {
+            level: 6
+          }
+        );
+
+
+      const zipBlob =
+        new Blob(
+          [zipData],
+          {
+            type: "application/zip"
+          }
+        );
+
+
+      const zipUrl =
+        URL.createObjectURL(
+          zipBlob
+        );
+
+
+      const a =
+        document.createElement(
+          "a"
+        );
+
+
+      a.href =
+        zipUrl;
+
+
+      a.download =
+        `${fontBaseName}_clay_stamps.zip`;
+
+
+      a.click();
+
+
+      URL.revokeObjectURL(
+        zipUrl
+      );
+
+
+      status.textContent =
+        "Alphabet + numbers ZIP generated.";
+
+    } catch (err) {
+
+      console.error(err);
+
+      status.textContent =
+        "Something went wrong while generating the ZIP.";
+
+    } finally {
+
+      generateBatchButton.disabled =
+        false;
+
+      generateButton.disabled =
+        false;
+
+      previewButton.disabled =
+        false;
     }
   }
 );
