@@ -6,7 +6,7 @@ import {
   Evaluator,
   ADDITION,
   SUBTRACTION
-} from "https://cdn.jsdelivr.net/npm/three-bvh-csg@0.0.17/+esm";
+} from "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/exporters/STLExporter.js";
 import opentype from "https://cdn.jsdelivr.net/npm/opentype.js@1.3.4/+esm";
 
 
@@ -22,7 +22,7 @@ const handleHeightInput = document.getElementById("handleHeight");
 const engravingDepthInput = document.getElementById("engravingDepth");
 
 const generateButton = document.getElementById("generate");
-const preview = document.getElementById("preview");
+const viewer = document.getElementById("viewer");
 const status = document.getElementById("status");
 const fontName = document.getElementById("fontName");
 
@@ -37,24 +37,30 @@ scene.background = new THREE.Color(0xf0f0f0);
 
 const camera = new THREE.PerspectiveCamera(
   45,
-  preview.clientWidth / preview.clientHeight,
+  viewer.clientWidth / viewer.clientHeight,
   0.1,
   1000
 );
 
 camera.position.set(0, 80, 120);
 
+
 const renderer = new THREE.WebGLRenderer({
   antialias: true
 });
 
-renderer.setPixelRatio(window.devicePixelRatio);
-renderer.setSize(
-  preview.clientWidth,
-  preview.clientHeight
+renderer.setPixelRatio(
+  window.devicePixelRatio
 );
 
-preview.appendChild(renderer.domElement);
+renderer.setSize(
+  viewer.clientWidth,
+  viewer.clientHeight
+);
+
+viewer.appendChild(
+  renderer.domElement
+);
 
 
 const controls = new OrbitControls(
@@ -76,7 +82,10 @@ const ambientLight =
     2
   );
 
-scene.add(ambientLight);
+scene.add(
+  ambientLight
+);
+
 
 const directionalLight =
   new THREE.DirectionalLight(
@@ -90,11 +99,13 @@ directionalLight.position.set(
   80
 );
 
-scene.add(directionalLight);
+scene.add(
+  directionalLight
+);
 
 
 // ------------------------------------------------------------
-// Materials
+// Material
 // ------------------------------------------------------------
 
 const material =
@@ -115,14 +126,16 @@ let stampBrush = null;
 
 
 // ------------------------------------------------------------
-// Helpers
+// Convert OpenType path to Three.js shapes
 // ------------------------------------------------------------
 
 function pathToShapes(path) {
-  const shapePath = new THREE.ShapePath();
+  const shapePath =
+    new THREE.ShapePath();
 
   for (const command of path.commands) {
     switch (command.type) {
+
       case "M":
         shapePath.moveTo(
           command.x,
@@ -171,17 +184,27 @@ function pathToShapes(path) {
 // ------------------------------------------------------------
 
 function createStamp() {
+
   const size =
-    parseFloat(stampSizeInput.value);
+    parseFloat(
+      stampSizeInput.value
+    );
 
   const depth =
-    parseFloat(letterDepthInput.value);
+    parseFloat(
+      letterDepthInput.value
+    );
 
   const handleHeight =
-    parseFloat(handleHeightInput.value);
+    parseFloat(
+      handleHeightInput.value
+    );
 
   const engravingDepth =
-    parseFloat(engravingDepthInput.value);
+    parseFloat(
+      engravingDepthInput.value
+    );
+
 
   const bodyHeight = 10;
 
@@ -192,19 +215,16 @@ function createStamp() {
     size * 0.30;
 
   const totalHeight =
-    bodyHeight + handleHeight;
+    bodyHeight +
+    handleHeight;
 
-
-  // ----------------------------------------------------------
-  // CSG evaluator
-  // ----------------------------------------------------------
 
   const evaluator =
     new Evaluator();
 
 
   // ----------------------------------------------------------
-  // Main stamp body
+  // Main body
   // ----------------------------------------------------------
 
   const bodyGeometry =
@@ -253,7 +273,7 @@ function createStamp() {
 
 
   // ----------------------------------------------------------
-  // Join body + handle
+  // Join body and handle
   // ----------------------------------------------------------
 
   stampBrush =
@@ -265,14 +285,27 @@ function createStamp() {
 
 
   // ----------------------------------------------------------
-  // Raised letter on clay-facing side
+  // Get selected letter
   // ----------------------------------------------------------
 
   const char =
     letterInput.value || "A";
 
   const glyph =
-    currentFont.charToGlyph(char);
+    currentFont.charToGlyph(
+      char
+    );
+
+  if (!glyph) {
+    throw new Error(
+      "Could not find that character in the font."
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // Raised clay-facing letter
+  // ----------------------------------------------------------
 
   const path =
     glyph.getPath(
@@ -282,7 +315,9 @@ function createStamp() {
     );
 
   const shapes =
-    pathToShapes(path);
+    pathToShapes(
+      path
+    );
 
   if (!shapes.length) {
     throw new Error(
@@ -302,7 +337,6 @@ function createStamp() {
     );
 
 
-  // Scale the letter to fit the stamp.
   letterGeometry.computeBoundingBox();
 
   const letterBox =
@@ -312,12 +346,14 @@ function createStamp() {
     letterBox.max.x -
     letterBox.min.x;
 
+
   const letterScale =
     (size * 0.65) /
     Math.max(
       letterWidth,
       0.001
     );
+
 
   letterGeometry.scale(
     letterScale,
@@ -342,7 +378,7 @@ function createStamp() {
     );
 
 
-  // Put the raised letter below
+  // Put raised letter below
   // the bottom of the stamp.
   letterBrush.position.y =
     -depth / 2;
@@ -359,7 +395,7 @@ function createStamp() {
 
 
   // ----------------------------------------------------------
-  // Recessed identification letter
+  // Top recessed identification letter
   // ----------------------------------------------------------
 
   const engravingPath =
@@ -385,15 +421,14 @@ function createStamp() {
     new THREE.ExtrudeGeometry(
       engravingShapes,
       {
-        depth: engravingDepth + 2,
+        depth:
+          engravingDepth + 2,
         bevelEnabled: false,
         curveSegments: 8
       }
     );
 
 
-  // Scale the engraving letter
-  // to fit comfortably on the handle.
   engravingGeometry.computeBoundingBox();
 
   const engravingBox =
@@ -403,12 +438,14 @@ function createStamp() {
     engravingBox.max.x -
     engravingBox.min.x;
 
+
   const engravingScale =
     (handleRadius * 1.25) /
     Math.max(
       engravingWidth,
       0.001
     );
+
 
   engravingGeometry.scale(
     engravingScale,
@@ -419,10 +456,7 @@ function createStamp() {
   engravingGeometry.center();
 
 
-  // The font's extrusion initially runs
-  // along local Z.
-  //
-  // Rotate it so the cutter runs
+  // Rotate the font extrusion
   // vertically along Y.
   engravingGeometry.rotateX(
     Math.PI / 2
@@ -436,11 +470,8 @@ function createStamp() {
     );
 
 
-  // Put the engraving cutter through
+  // Position the cutter through
   // the top of the handle.
-  //
-  // The cutter extends downward from
-  // the top surface into the handle.
   engravingBrush.position.y =
     totalHeight -
     engravingDepth / 2;
@@ -462,23 +493,28 @@ function createStamp() {
 
 
 // ------------------------------------------------------------
-// Preview
+// Build preview
 // ------------------------------------------------------------
 
 function buildPreview() {
+
   if (!currentFont) {
     return;
   }
 
+
   try {
+
     const newStamp =
       createStamp();
+
 
     if (previewObject) {
       scene.remove(
         previewObject
       );
     }
+
 
     previewObject =
       new THREE.Mesh(
@@ -490,11 +526,15 @@ function buildPreview() {
       previewObject
     );
 
+
     stampBrush =
       newStamp;
 
 
-    // Center the camera on the stamp.
+    // --------------------------------------------------------
+    // Center the model
+    // --------------------------------------------------------
+
     const box =
       new THREE.Box3()
         .setFromObject(
@@ -506,21 +546,24 @@ function buildPreview() {
         new THREE.Vector3()
       );
 
-    const size =
+    const modelSize =
       box.getSize(
         new THREE.Vector3()
       );
+
 
     previewObject.position.sub(
       center
     );
 
+
     const maxDimension =
       Math.max(
-        size.x,
-        size.y,
-        size.z
+        modelSize.x,
+        modelSize.y,
+        modelSize.z
       );
+
 
     camera.position.set(
       maxDimension * 1.5,
@@ -528,11 +571,13 @@ function buildPreview() {
       maxDimension * 1.8
     );
 
+
     camera.lookAt(
       0,
       0,
       0
     );
+
 
     controls.target.set(
       0,
@@ -542,9 +587,12 @@ function buildPreview() {
 
     controls.update();
 
+
     status.textContent =
       "Preview updated.";
+
   } catch (err) {
+
     console.error(err);
 
     status.textContent =
@@ -560,6 +608,7 @@ function buildPreview() {
 fontFile.addEventListener(
   "change",
   async () => {
+
     const file =
       fontFile.files[0];
 
@@ -567,24 +616,34 @@ fontFile.addEventListener(
       return;
     }
 
+
     status.textContent =
       "Reading font…";
 
+
     try {
+
       const buffer =
         await file.arrayBuffer();
 
       currentFont =
-        opentype.parse(buffer);
+        opentype.parse(
+          buffer
+        );
+
 
       fontName.textContent =
         file.name;
 
+
       status.textContent =
         "Font loaded. Pick a letter and generate.";
 
+
       buildPreview();
+
     } catch (err) {
+
       console.error(err);
 
       currentFont = null;
@@ -603,10 +662,12 @@ fontFile.addEventListener(
 letterInput.addEventListener(
   "input",
   () => {
+
     letterInput.value =
       [...letterInput.value]
         .slice(0, 1)
         .join("");
+
 
     if (currentFont) {
       buildPreview();
@@ -616,20 +677,22 @@ letterInput.addEventListener(
 
 
 // ------------------------------------------------------------
-// Settings inputs
+// Other settings
 // ------------------------------------------------------------
 
 for (
-  const el of [
+  const element of [
     stampSizeInput,
     letterDepthInput,
     handleHeightInput,
     engravingDepthInput
   ]
 ) {
-  el.addEventListener(
+
+  element.addEventListener(
     "input",
     () => {
+
       if (currentFont) {
         buildPreview();
       }
@@ -645,27 +708,34 @@ for (
 generateButton.addEventListener(
   "click",
   () => {
+
     if (!currentFont) {
+
       status.textContent =
         "Choose a TTF or OTF font first.";
 
       return;
     }
 
+
     try {
-      const group =
+
+      const stamp =
         createStamp();
+
 
       const exporter =
         new STLExporter();
 
+
       const stl =
         exporter.parse(
-          group,
+          stamp,
           {
             binary: false
           }
         );
+
 
       const blob =
         new Blob(
@@ -675,14 +745,17 @@ generateButton.addEventListener(
           }
         );
 
+
       const url =
         URL.createObjectURL(
           blob
         );
 
+
       const letter =
         letterInput.value ||
         "stamp";
+
 
       const safeFont =
         (
@@ -698,25 +771,32 @@ generateButton.addEventListener(
             "_"
           );
 
+
       const a =
         document.createElement(
           "a"
         );
+
 
       a.href = url;
 
       a.download =
         `${safeFont}_${letter}_clay_stamp.stl`;
 
+
       a.click();
+
 
       URL.revokeObjectURL(
         url
       );
 
+
       status.textContent =
         "STL generated.";
+
     } catch (err) {
+
       console.error(err);
 
       status.textContent =
@@ -727,22 +807,25 @@ generateButton.addEventListener(
 
 
 // ------------------------------------------------------------
-// Resize handling
+// Resize
 // ------------------------------------------------------------
 
 window.addEventListener(
   "resize",
   () => {
+
     const width =
-      preview.clientWidth;
+      viewer.clientWidth;
 
     const height =
-      preview.clientHeight;
+      viewer.clientHeight;
+
 
     camera.aspect =
       width / height;
 
     camera.updateProjectionMatrix();
+
 
     renderer.setSize(
       width,
@@ -757,16 +840,20 @@ window.addEventListener(
 // ------------------------------------------------------------
 
 function animate() {
+
   requestAnimationFrame(
     animate
   );
 
+
   controls.update();
+
 
   renderer.render(
     scene,
     camera
   );
 }
+
 
 animate();
