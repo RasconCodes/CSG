@@ -6,65 +6,142 @@
   <title>Clay Stamp Maker</title>
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
+
   <main class="app">
+
     <header>
       <h1>Clay Stamp Maker</h1>
       <p>Turn a font and a letter into a 3D-printable clay stamp.</p>
     </header>
 
+
     <section class="controls">
+
       <label>
         Font (.TTF / .OTF)
-        <input id="fontFile" type="file" accept=".ttf,.otf,font/ttf,font/otf">
+        <input
+          id="fontFile"
+          type="file"
+          accept=".ttf,.otf,font/ttf,font/otf"
+        >
       </label>
+
 
       <label>
         Letter
-        <input id="letter" type="text" value="A" maxlength="1" autocomplete="off">
+        <input
+          id="letter"
+          type="text"
+          value="A"
+          maxlength="1"
+          autocomplete="off"
+        >
       </label>
+
 
       <label>
         Stamp width (mm)
-        <input id="stampSize" type="number" value="25" min="10" max="100" step="1">
+        <input
+          id="stampSize"
+          type="number"
+          value="25"
+          min="10"
+          max="100"
+          step="1"
+        >
       </label>
+
 
       <label>
         Raised letter depth (mm)
-        <input id="letterDepth" type="number" value="2" min="0.5" max="10" step="0.1">
+        <input
+          id="letterDepth"
+          type="number"
+          value="2"
+          min="0.5"
+          max="10"
+          step="0.1"
+        >
       </label>
+
 
       <label>
         Handle height (mm)
-        <input id="handleHeight" type="number" value="18" min="5" max="50" step="1">
+        <input
+          id="handleHeight"
+          type="number"
+          value="18"
+          min="5"
+          max="50"
+          step="1"
+        >
       </label>
+
 
       <label>
         Handle top engraving depth (mm)
-        <input id="engravingDepth" type="number" value="1.2" min="0.2" max="5" step="0.1">
+        <input
+          id="engravingDepth"
+          type="number"
+          value="1.2"
+          min="0.2"
+          max="5"
+          step="0.1"
+        >
       </label>
 
-      <button id="generate">Generate STL</button>
-      <p id="status" class="status">Choose a font to begin.</p>
+
+      <button id="previewButton">
+        Preview 3D Stamp
+      </button>
+
+
+      <button id="generate">
+        Generate STL
+      </button>
+
+
+      <button id="generateBatch">
+        Generate Alphabet + Numbers (.ZIP)
+      </button>
+
+
+      <p id="status" class="status">
+        Choose a font to begin.
+      </p>
+
     </section>
 
+
     <section class="preview">
+
       <div class="preview-head">
         <h2>Preview</h2>
         <span id="fontName">No font loaded</span>
       </div>
-      <div id="viewer" aria-label="3D stamp preview"></div>
+
+      <div
+        id="viewer"
+        aria-label="3D stamp preview"
+      ></div>
+
     </section>
+
   </main>
 
+
   <script type="importmap">
-{
-  "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"
+    }
   }
-}
-</script>
-  
+  </script>
+
+
   <script type="module" src="app.js"></script>
+
 </body>
 </html>
