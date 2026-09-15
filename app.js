@@ -6,7 +6,7 @@ import {
   Evaluator,
   ADDITION,
   SUBTRACTION
-} from "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/exporters/STLExporter.js";
+} from "https://cdn.jsdelivr.net/npm/three-bvh-csg@0.0.17/+esm";
 import opentype from "https://cdn.jsdelivr.net/npm/opentype.js@1.3.4/+esm";
 
 
@@ -19,35 +19,53 @@ const letterInput = document.getElementById("letter");
 const stampSizeInput = document.getElementById("stampSize");
 const letterDepthInput = document.getElementById("letterDepth");
 const handleHeightInput = document.getElementById("handleHeight");
-const engravingDepthInput = document.getElementById("engravingDepth");
+const engravingDepthInput =
+  document.getElementById("engravingDepth");
 
-const generateButton = document.getElementById("generate");
-const viewer = document.getElementById("viewer");
-const status = document.getElementById("status");
-const fontName = document.getElementById("fontName");
+const generateButton =
+  document.getElementById("generate");
+
+const viewer =
+  document.getElementById("viewer");
+
+const status =
+  document.getElementById("status");
+
+const fontName =
+  document.getElementById("fontName");
 
 
 // ------------------------------------------------------------
 // Three.js setup
 // ------------------------------------------------------------
 
-const scene = new THREE.Scene();
+const scene =
+  new THREE.Scene();
 
-scene.background = new THREE.Color(0xf0f0f0);
+scene.background =
+  new THREE.Color(0xf0f0f0);
 
-const camera = new THREE.PerspectiveCamera(
-  45,
-  viewer.clientWidth / viewer.clientHeight,
-  0.1,
-  1000
+
+const camera =
+  new THREE.PerspectiveCamera(
+    45,
+    viewer.clientWidth /
+      viewer.clientHeight,
+    0.1,
+    1000
+  );
+
+camera.position.set(
+  0,
+  80,
+  120
 );
 
-camera.position.set(0, 80, 120);
 
-
-const renderer = new THREE.WebGLRenderer({
-  antialias: true
-});
+const renderer =
+  new THREE.WebGLRenderer({
+    antialias: true
+  });
 
 renderer.setPixelRatio(
   window.devicePixelRatio
@@ -63,12 +81,14 @@ viewer.appendChild(
 );
 
 
-const controls = new OrbitControls(
-  camera,
-  renderer.domElement
-);
+const controls =
+  new OrbitControls(
+    camera,
+    renderer.domElement
+  );
 
-controls.enableDamping = true;
+controls.enableDamping =
+  true;
 
 
 // ------------------------------------------------------------
@@ -126,31 +146,43 @@ let stampBrush = null;
 
 
 // ------------------------------------------------------------
-// Convert OpenType path to Three.js shapes
+// Convert OpenType path into Three.js shapes
 // ------------------------------------------------------------
 
 function pathToShapes(path) {
+
   const shapePath =
     new THREE.ShapePath();
 
-  for (const command of path.commands) {
+
+  for (
+    const command of path.commands
+  ) {
+
     switch (command.type) {
 
       case "M":
+
         shapePath.moveTo(
           command.x,
           command.y
         );
+
         break;
 
+
       case "L":
+
         shapePath.lineTo(
           command.x,
           command.y
         );
+
         break;
 
+
       case "C":
+
         shapePath.bezierCurveTo(
           command.x1,
           command.y1,
@@ -159,21 +191,28 @@ function pathToShapes(path) {
           command.x,
           command.y
         );
+
         break;
 
+
       case "Q":
+
         shapePath.quadraticCurveTo(
           command.x1,
           command.y1,
           command.x,
           command.y
         );
+
         break;
 
+
       case "Z":
+
         break;
     }
   }
+
 
   return shapePath.toShapes(true);
 }
@@ -206,7 +245,12 @@ function createStamp() {
     );
 
 
-  const bodyHeight = 10;
+  // ----------------------------------------------------------
+  // Dimensions
+  // ----------------------------------------------------------
+
+  const bodyHeight =
+    10;
 
   const bodyRadius =
     size / 2;
@@ -218,6 +262,10 @@ function createStamp() {
     bodyHeight +
     handleHeight;
 
+
+  // ----------------------------------------------------------
+  // CSG evaluator
+  // ----------------------------------------------------------
 
   const evaluator =
     new Evaluator();
@@ -244,7 +292,9 @@ function createStamp() {
   bodyBrush.position.y =
     bodyHeight / 2;
 
-  bodyBrush.updateMatrixWorld(true);
+  bodyBrush.updateMatrixWorld(
+    true
+  );
 
 
   // ----------------------------------------------------------
@@ -269,11 +319,13 @@ function createStamp() {
     bodyHeight +
     handleHeight / 2;
 
-  handleBrush.updateMatrixWorld(true);
+  handleBrush.updateMatrixWorld(
+    true
+  );
 
 
   // ----------------------------------------------------------
-  // Join body and handle
+  // Join body + handle
   // ----------------------------------------------------------
 
   stampBrush =
@@ -285,7 +337,7 @@ function createStamp() {
 
 
   // ----------------------------------------------------------
-  // Get selected letter
+  // Selected character
   // ----------------------------------------------------------
 
   const char =
@@ -339,8 +391,10 @@ function createStamp() {
 
   letterGeometry.computeBoundingBox();
 
+
   const letterBox =
     letterGeometry.boundingBox;
+
 
   const letterWidth =
     letterBox.max.x -
@@ -361,11 +415,12 @@ function createStamp() {
     1
   );
 
+
   letterGeometry.center();
 
 
   // Rotate the font extrusion
-  // so it runs vertically through Y.
+  // vertically along Y.
   letterGeometry.rotateX(
     Math.PI / 2
   );
@@ -378,12 +433,15 @@ function createStamp() {
     );
 
 
-  // Put raised letter below
+  // Put the raised letter below
   // the bottom of the stamp.
   letterBrush.position.y =
     -depth / 2;
 
-  letterBrush.updateMatrixWorld(true);
+
+  letterBrush.updateMatrixWorld(
+    true
+  );
 
 
   stampBrush =
@@ -405,10 +463,12 @@ function createStamp() {
       100
     );
 
+
   const engravingShapes =
     pathToShapes(
       engravingPath
     );
+
 
   if (!engravingShapes.length) {
     throw new Error(
@@ -423,16 +483,22 @@ function createStamp() {
       {
         depth:
           engravingDepth + 2,
-        bevelEnabled: false,
-        curveSegments: 8
+
+        bevelEnabled:
+          false,
+
+        curveSegments:
+          8
       }
     );
 
 
   engravingGeometry.computeBoundingBox();
 
+
   const engravingBox =
     engravingGeometry.boundingBox;
+
 
   const engravingWidth =
     engravingBox.max.x -
@@ -453,6 +519,7 @@ function createStamp() {
     1
   );
 
+
   engravingGeometry.center();
 
 
@@ -470,16 +537,20 @@ function createStamp() {
     );
 
 
-  // Position the cutter through
-  // the top of the handle.
+  // Put the engraving cutter
+  // through the top of the handle.
   engravingBrush.position.y =
     totalHeight -
     engravingDepth / 2;
 
-  engravingBrush.updateMatrixWorld(true);
+
+  engravingBrush.updateMatrixWorld(
+    true
+  );
 
 
-  // Subtract the letter-shaped cutter.
+  // Subtract the actual
+  // letter-shaped cutter.
   stampBrush =
     evaluator.evaluate(
       stampBrush,
@@ -510,6 +581,7 @@ function buildPreview() {
 
 
     if (previewObject) {
+
       scene.remove(
         previewObject
       );
@@ -522,6 +594,7 @@ function buildPreview() {
         material
       );
 
+
     scene.add(
       previewObject
     );
@@ -532,7 +605,7 @@ function buildPreview() {
 
 
     // --------------------------------------------------------
-    // Center the model
+    // Center model
     // --------------------------------------------------------
 
     const box =
@@ -541,10 +614,12 @@ function buildPreview() {
           previewObject
         );
 
+
     const center =
       box.getCenter(
         new THREE.Vector3()
       );
+
 
     const modelSize =
       box.getSize(
@@ -584,6 +659,7 @@ function buildPreview() {
       0,
       0
     );
+
 
     controls.update();
 
@@ -626,6 +702,7 @@ fontFile.addEventListener(
       const buffer =
         await file.arrayBuffer();
 
+
       currentFont =
         opentype.parse(
           buffer
@@ -646,7 +723,9 @@ fontFile.addEventListener(
 
       console.error(err);
 
-      currentFont = null;
+      currentFont =
+        null;
+
 
       status.textContent =
         "Could not read that font. Please choose a valid TTF or OTF.";
@@ -677,7 +756,7 @@ letterInput.addEventListener(
 
 
 // ------------------------------------------------------------
-// Other settings
+// Numeric settings
 // ------------------------------------------------------------
 
 for (
@@ -778,7 +857,9 @@ generateButton.addEventListener(
         );
 
 
-      a.href = url;
+      a.href =
+        url;
+
 
       a.download =
         `${safeFont}_${letter}_clay_stamp.stl`;
@@ -807,7 +888,7 @@ generateButton.addEventListener(
 
 
 // ------------------------------------------------------------
-// Resize
+// Window resize
 // ------------------------------------------------------------
 
 window.addEventListener(
@@ -823,6 +904,7 @@ window.addEventListener(
 
     camera.aspect =
       width / height;
+
 
     camera.updateProjectionMatrix();
 
